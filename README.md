@@ -4,7 +4,7 @@ This repository implements instrumentation for [malli](https://github.com/metosi
 
 ## Rationale
 
-Malli is awesome, but instrumentation doesn't seem to be implemented yet, so I scratched my own itch. There are similar libraries like [aave](https://github.com/teknql/aave) that offer similar features on top of malli. However, this is the only one AFAIK that uses the same instrumentation API as clojure.spec.alpha, where instrumentation occurs in a dedicated command, and with no special `defn` wrappers.
+Malli is awesome, but instrumentation doesn't seem to be implemented yet, so I scratched my own itch. There are libraries like [aave](https://github.com/teknql/aave) offering similar features on top of malli. However, to the best of my knowledge this is the only library that uses the same instrumentation API as clojure.spec.alpha, where instrumentation occurs in a dedicated command, and with no special `defn` wrappers.
 
 ## Tool maturity
 
