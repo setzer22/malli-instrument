@@ -2,6 +2,24 @@
   (:require [malli.core :as m]
             [malli.error :as me]))
 
+(defn safe-humanize
+  "Malli can throw when calling explain or humanize on some inputs. This is undesirable
+   as it generates very obscure error messages. This function wraps the calls to humanize
+   with try to avoid crashing in instrumented functions"
+  [schema, data]
+  (let [explained (try {:ok (m/explain schema data)}
+                       (catch Exception e
+                         {:error e}))
+        humanized (if-let [explained (:ok explained)]
+                    (try (me/humanize explained)
+                         (catch Exception e
+                           {:error e}))
+                    {:ok explained})]
+    (if-let [humanized (:ok humanized)]
+      humanized
+      (assoc humanized
+             :message "There was an error when generating human-readable string"))))
+
 (defn- wrap-with-validate-input
   "Wraps the given function `f` with code that will validate its input arguments
    with the provided malli `schema`."
@@ -11,7 +29,7 @@
       (apply f args)
       #_else
       (throw (ex-info "Function received wrong input"
-                      {:error (me/humanize (m/explain schema args))
+                      {:error (safe-humanize schema args)
                        :value args})))))
 
 (defn- wrap-with-validate-output
@@ -23,7 +41,7 @@
         result
         #_else
         (throw (ex-info "Function returned wrong output"
-                        {:error (me/humanize (m/explain schema args))
+                        {:error (safe-humanize schema result)
                          :value result}))))))
 
 (defn- wrap-with-instrumentation

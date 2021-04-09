@@ -6,7 +6,7 @@
 ;; After running instrumentation, su
 
 (defun clojure-malli-instrument/with-require-malli (code)
-    (concat "(try (do (require '[malli-anstrument.core]) "
+    (concat "(try (do (require '[malli-instrument.core]) "
                 code ")
                (catch Exception e \"malli-instrument.core not found in project!\"))"))
 
@@ -16,8 +16,8 @@
 (defun clojure-malli-instrument/instrument-all! ()
   (add-hook 'cider-file-loaded-hook 'clojure-malli-instrument/instrument-all!)
   (cider-nrepl-send-sync-request
-   '("op" "eval"
-     "code" (clojure-malli-instrument/instrument-code))))
+   `("op" "eval"
+     "code" ,(clojure-malli-instrument/instrument-code))))
 
 (defun clojure-malli-instrument/unstrument-code ()
   (clojure-malli-instrument/with-require-malli "(malli-instrument.core/unstrument-all!)"))
@@ -25,8 +25,8 @@
 (defun clojure-malli-instrument/unstrument-all! ()
   (remove-hook 'cider-file-loaded-hook 'clojure-malli-instrument/instrument-all!)
   (cider-nrepl-send-sync-request
-   '("op" "eval"
-     "code" (clojure-malli-instrument/unstrument-code))))
+   `("op" "eval"
+     "code" ,(clojure-malli-instrument/unstrument-code))))
 
 (add-hook 'cider-file-loaded-hook 'clojure-malli-instrument/instrument-all!)
 
