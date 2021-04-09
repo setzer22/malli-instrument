@@ -15,7 +15,7 @@ This library is in a very early stage. It works but is not yet intended for prod
 Using deps.edn and git dependencies:
 
 ```clj
-{setzer22/malli-instrument {:git/url "https://github.com/setzer22/malli-instrument.git" :sha "0df6ae2d62ddf4d20aa69f21925a1a4651a35690"}}
+{setzer22/malli-instrument {:git/url "https://github.com/setzer22/malli-instrument.git" :sha "6d61b6f6e351cbf0faf85c57ef66bd19c4dc8b88"}}
 ```
 Being in a very early stage, this library is not published in any maven repository, so other forms of distribution are currently unsupported.
 
