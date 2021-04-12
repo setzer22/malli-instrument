@@ -11,7 +11,7 @@
                        (catch Exception e
                          {:error e}))
         humanized (if-let [explained (:ok explained)]
-                    (try (me/humanize explained)
+                    (try {:ok (me/humanize explained)}
                          (catch Exception e
                            {:error e}))
                     {:ok explained})]
