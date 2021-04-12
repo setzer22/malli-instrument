@@ -15,7 +15,7 @@ This library is in a very early stage. It works but is not yet intended for prod
 Using deps.edn and git dependencies:
 
 ```clj
-{setzer22/malli-instrument {:git/url "https://github.com/setzer22/malli-instrument.git" :sha "0df6ae2d62ddf4d20aa69f21925a1a4651a35690"}}
+{setzer22/malli-instrument {:git/url "https://github.com/setzer22/malli-instrument.git" :sha "6d61b6f6e351cbf0faf85c57ef66bd19c4dc8b88"}}
 ```
 Being in a very early stage, this library is not published in any maven repository, so other forms of distribution are currently unsupported.
 
@@ -32,7 +32,7 @@ Being in a very early stage, this library is not published in any maven reposito
 (mi/instrument-all!)
 
 (foo 1 2) ;; Throws ex-info with message "Function returned wrong output"
-          ;; and data {:error ["should be an int"], :value "3"}
+          ;; and data {:error ["should be a string"], :value 3}
 ```
 
  ## Integration with existing tooling
