@@ -17,8 +17,10 @@
                     {:ok explained})]
     (if-let [humanized (:ok humanized)]
       humanized
-      (assoc humanized
-             :message "There was an error when generating human-readable string"))))
+      {:message (str "There was an error when generating human-readable string"
+                     " (Could be this: https://github.com/metosin/malli/issues/321)")
+       :explain-raw explained
+       :exception (:error humanized)})))
 
 (defn- wrap-with-validate-input
   "Wraps the given function `f` with code that will validate its input arguments
