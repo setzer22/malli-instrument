@@ -63,7 +63,7 @@
 (defn throw-invalid-output
   "The error message when the output doesn't match the expected schema."
   [fn-name schema result]
-  (throw (ex-info (format "Function %s returned wrong output" fn-name)
+  (throw (ex-info (format "Function %s returned invalid output" fn-name)
                   {:error (safe-humanize schema result)
                    :value result})))
 
@@ -80,7 +80,8 @@
       (if-not matching-arity
         (throw-invalid-arity fn-name (count args) (map :arity function-infos))
 
-        (if-not (m/validate input-schema args)
+        ; NOTE: (m/validate :cat nil) is false, but args is bound to nil for 0-arg calls
+        (if-not (m/validate input-schema (or args '()))
           (throw-invalid-input fn-name input-schema args)
 
           (let [result (apply f args)]
