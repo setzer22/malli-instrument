@@ -26,7 +26,8 @@
          (foo "1" "2"))))
 
     (t/is
-     (= '{:error [["should be an int"]], :value ("1")}
+     (= '{:cause :invalid-arity, :expected-arities [2], :num-args 1}
+        #_{:clj-kondo/ignore [:invalid-arity]}
         (expect-ex-data (foo "1"))))
 
     (t/is
@@ -43,4 +44,6 @@
 
     (t/is
      (= '{:error ["should be an int"], :value "3"}
-        (expect-ex-data (foo 1 2))))))
+        (expect-ex-data (foo 1 2))))
+
+    (sut/unstrument-all!)))

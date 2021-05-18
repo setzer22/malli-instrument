@@ -22,43 +22,87 @@
        :explain-raw explained
        :exception (:error humanized)})))
 
-(defn- wrap-with-validate-input
+(defn- find-matching-arity
+  "Given the length of an arglist and a list of function-info, returns the
+   function-info that matches the given arity, or nil when no arity matches"
+  [args-count, function-infos]
+  (let [arities-map (->> (map (fn [{:keys [arity] :as fn-info}]
+                                [arity fn-info])
+                              function-infos)
+                         (into {}))
+        varargs (:varargs arities-map)]
+    (cond
+      (arities-map args-count) (arities-map args-count)
+      (and varargs
+           (>= args-count (:min varargs))
+           (or (not (:max varargs)) (<= args-count (:max varargs)))) varargs
+      :else nil)))
+
+(defn throw-invalid-arity
+  "The error message when there's an argument count mismatch."
+  [fn-name num-args, arities]
+  (let [info-map {:cause :invalid-arity
+                  :expected-arities arities
+                  :num-args num-args}]
+   (if (= (count arities) 1)
+     (throw (ex-info (format "Function %s received wrong number of arguments. Expected %d, got %d."
+                             fn-name (first arities) num-args)
+                     info-map))
+     #_else
+     (throw (ex-info (format "No matching arity for function %s.\n %d arguments given. Expected one of: %s"
+                             fn-name num-args (vec arities))
+                     info-map)))))
+
+(defn throw-invalid-input
+  "The error message when the input doesn't match the schema."
+  [fn-name schema args]
+  (throw (ex-info (format "Function %s received invalid input" fn-name)
+                  {:error (safe-humanize schema args)
+                   :value args})))
+
+(defn throw-invalid-output
+  "The error message when the output doesn't match the expected schema."
+  [fn-name schema result]
+  (throw (ex-info (format "Function %s returned wrong output" fn-name)
+                  {:error (safe-humanize schema result)
+                   :value result})))
+
+(defn wrap-with-instrumentation
   "Wraps the given function `f` with code that will validate its input arguments
-   with the provided malli `schema`."
-  [f, schema]
+   against the provided `fn-schema`. If at least one of the input arities matches
+   the arglist, the output will also be validated against the arity's return schema."
+  [fn-name f, fn-schema]
   (fn [& args]
-    (if (m/validate schema args)
-      (apply f args)
-      #_else
-      (throw (ex-info "Function received wrong input"
-                      {:error (safe-humanize schema args)
-                       :value args})))))
+    (let [function-infos (:function-infos fn-schema)
+          {input-schema :input, ret-schema :output :as matching-arity} (find-matching-arity
+                                                                        (count args) function-infos)]
 
-(defn- wrap-with-validate-output
-  "Similar to `wrap-with-validate-input`, but checks return value instead."
-  [f, schema]
-  (fn [& args]
-    (let [result (apply f args)]
-      (if (m/validate schema result)
-        result
-        #_else
-        (throw (ex-info "Function returned wrong output"
-                        {:error (safe-humanize schema result)
-                         :value result}))))))
+      (if-not matching-arity
+        (throw-invalid-arity fn-name (count args) (map :arity function-infos))
 
-(defn- wrap-with-instrumentation
-  "Combines `wrap-with-validate-input` and `wrap-with-validate-output` for
-  complete instrumentation"
-  [f, args-schema, ret-schema]
-  (wrap-with-validate-input (wrap-with-validate-output f ret-schema) args-schema))
+        (if-not (m/validate input-schema args)
+          (throw-invalid-input fn-name input-schema args)
+
+          (let [result (apply f args)]
+            (if-not (m/validate ret-schema result)
+              (throw-invalid-output fn-name ret-schema result)
+
+              result)))))))
 
 (defn- get-fn-schema
   "Given a function's symbol namespace and name, finds a registered malli schema in
    the global function registry. See `malli.core/function-schemas`."
   [the-ns, the-name]
-  (let [fn-schema (m/form (:schema (get-in (m/function-schemas) [the-ns the-name])))]
-    {:args (-> fn-schema (nth 1))
-     :ret (-> fn-schema (nth 2))}))
+  (let [fn-schema (:schema (get-in (m/function-schemas) [the-ns the-name]))]
+    (case (m/type fn-schema)
+      :=> {:fn-schema-type :single-arity
+           :function-infos [(m/-function-info fn-schema)]}
+      :function {:fn-schema-type :multi-arity
+                 :function-infos (mapv m/-function-info (m/children fn-schema))}
+      #_else (throw
+              (ex-info
+               (format (str "Invalid function schema: %s. Expected single arity with :=>"
+                            "or multiple arities using :function") fn-schema))))))
 
 (defn locate-var
   "Given a namespace and name symbols, returns the var in that namespace if found,
@@ -73,14 +117,14 @@
   metadata to allow restoring via `unstrument-one!`. This operation is
   idempotent, multiple runs will not wrap the function more than once."
   [the-ns, the-name]
-  (let [{:keys [args, ret]} (get-fn-schema the-ns, the-name)
+  (let [fn-schema (get-fn-schema the-ns, the-name)
         the-var (locate-var the-ns the-name)]
     (if the-var
       (let [original-fn (or (::original-fn (meta the-var)) (deref the-var))]
         (alter-meta! the-var assoc ::original-fn original-fn)
         (alter-var-root
          the-var
-         (constantly (wrap-with-instrumentation original-fn args ret))))
+         (constantly (wrap-with-instrumentation (str the-ns "/" the-name) original-fn fn-schema))))
 
       (throw (ex-info (format "Attempting to instrument non-existing var %s/%s" the-ns the-name)
                       {:error :VAR_NOT_FOUND
@@ -128,3 +172,6 @@
     (when (seq @errors)
       (throw (ex-info "There were unexpected errors during instrumentation"
                       {:errors @errors})))))
+
+
+
