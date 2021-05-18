@@ -25,7 +25,7 @@ Being in a very early stage, this library is not published in any maven reposito
 (require '[malli.core :as m])
 (require '[malli-instrument.core :as mi])
 
-(m/=> foo [:=> [:cat int? int?] string?)
+(m/=> foo [:=> [:cat int? int?] string?])
 (defn foo [x, y]
   (+ x y))
   
