@@ -103,7 +103,8 @@
       #_else (throw
               (ex-info
                (format (str "Invalid function schema: %s. Expected single arity with :=>"
-                            "or multiple arities using :function") fn-schema))))))
+                            "or multiple arities using :function") fn-schema)
+               {})))))
 
 (defn locate-var
   "Given a namespace and name symbols, returns the var in that namespace if found,
